@@ -5048,7 +5048,7 @@ function get_complete_user_data($field, $value, $mnethostid = null, $throwexcept
 function check_password_policy($password, &$errmsg, $user = null) {
     global $CFG;
 
-    if (!empty($CFG->passwordpolicy)) {
+    if (!empty($CFG->passwordpolicy) && !isguestuser($user)) {
         $errmsg = '';
         if (core_text::strlen($password) < $CFG->minpasswordlength) {
             $errmsg .= '<div>'. get_string('errorminpasswordlength', 'auth', $CFG->minpasswordlength) .'</div>';
@@ -10657,7 +10657,7 @@ function get_home_page() {
 function get_default_home_page(): int {
     global $CFG;
 
-    return !empty($CFG->enabledashboard) ? HOMEPAGE_MY : HOMEPAGE_MYCOURSES;
+    return (!isset($CFG->enabledashboard) || $CFG->enabledashboard) ? HOMEPAGE_MY : HOMEPAGE_MYCOURSES;
 }
 
 /**
@@ -11038,4 +11038,31 @@ function site_is_public() {
  */
 function exceeds_password_length(string $password, int $pepperlength = 0): bool {
     return (strlen($password) > (MAX_PASSWORD_CHARACTERS + $pepperlength));
+}
+
+/**
+ * A helper to replace PHP 8.3 usage of array_keys with two args.
+ *
+ * There is an indication that this will become a new method in PHP 8.4, but that has not happened yet.
+ * Therefore this non-polyfill has been created with a different naming convention.
+ * In the future it can be deprecated if a core PHP method is created.
+ *
+ * https://wiki.php.net/rfc/deprecate_functions_with_overloaded_signatures#array_keys
+ *
+ * @param array $array
+ * @param mixed $filter The value to filter on
+ * @param bool $strict Whether to apply a strit test with the filter
+ * @return array
+ */
+function moodle_array_keys_filter(array $array, mixed $filter, bool $strict = false): array {
+    return array_keys(array_filter(
+        $array,
+        function($value, $key) use ($filter, $strict): bool {
+            if ($strict) {
+                return $value === $filter;
+            }
+            return $value == $filter;
+        },
+        ARRAY_FILTER_USE_BOTH,
+    ));
 }
